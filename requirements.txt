@@ -1,5 +1,5 @@
 pipecat-ai[openai,webrtc,silero]
-pipecat-ai-small-webrtc-prebuilt
+pipecat-ai-prebuilt
 piper-tts
 faster-whisper
 av<19
