@@ -11,13 +11,14 @@ Pipecat             -- orchestrates the whole pipeline: the SmallWebRTCTransport
                         in order with VAD-based turn-taking, and the dev runner
                         serves a connectable browser client at :7860/client.
      v
-Whisper STT         -- self-hosted, converts caller's speech to text
-                        (model picked per LANGUAGE - see 03_DECISIONS_LOG.md)
+Whisper STT         -- self-hosted, one instance per configured LANGUAGES entry,
+(ServiceSwitcher)      switched live when the caller picks a language - see
+                        03_DECISIONS_LOG.md
      v
 OpenAI LLM          -- reads the text, decides what to say (model: gpt-4o-mini)
      v
-Piper TTS           -- self-hosted, converts the reply text back to speech
-                        (voice picked per LANGUAGE)
+Piper TTS           -- self-hosted, one instance per configured LANGUAGES entry,
+(ServiceSwitcher)      switched live along with STT
      v
 Caller hears the reply
 ```
@@ -30,8 +31,8 @@ Only **one remote paid service** is in this pipeline now: OpenAI, for the LLM. S
 - Large, actively-maintained provider ecosystem (150+ services) if requirements change again.
 - Open source, free - the framework itself has no per-minute platform fee (unlike VideoSDK/Vapi).
 
-## Why language is fixed per run (not yet mid-call)
-Pipecat has a `ServiceSwitcher` utility and `STTUpdateSettingsFrame`/`TTSUpdateSettingsFrame` for runtime reconfiguration, which is the right tool for letting a caller pick their language mid-call. This wasn't implemented yet because the exact API wasn't verified in enough depth to ship with confidence (the project's rule: verify an API before building against it, don't guess - see the repeated model-name/parameter mistakes earlier in `03_DECISIONS_LOG.md`). Instead, `LANGUAGE` is set once via env var at startup. See `05_NEXT_STEPS.md` for the plan to close this gap properly.
+## How the caller picks a language mid-call
+`LANGUAGES` (comma-separated, e.g. `en,ar`) controls which languages get pre-loaded. With more than one configured, the bot starts on a minimal "language router" persona (`build_language_detection_instructions()`) that asks which language the caller wants and calls a `set_language` function as soon as it's confident - the handler switches the STT and TTS `ServiceSwitcher`s to that language's pre-loaded instance and swaps the LLM's system prompt to the full `build_system_instructions(language)` persona. See `03_DECISIONS_LOG.md` for the design, including a frame-ordering race condition this had to avoid (verified against the actual installed `pipecat-ai` source, not just docs). Setting `LANGUAGES` to a single value skips the chooser entirely.
 
 ## Project Files
 
@@ -47,19 +48,19 @@ scripts/
 docs/                       -- project context (this folder)
 ecosystem.config.js         -- PM2 process config
 deploy.sh                   -- one-command VPS update script
-.env / .env.example         -- OPENAI_API_KEY and LANGUAGE
+.env / .env.example         -- OPENAI_API_KEY and LANGUAGES
 README.md                   -- setup, run, deployment instructions
 ```
 
 | File | Purpose |
 |---|---|
 | `app/main.py` | Entry point. Defines `run_bot()` (builds the STT/LLM/TTS `Pipeline`, runs it via `PipelineTask`/`PipelineRunner`) and `bot()` (the Pipecat dev-runner entry point that wires up the `SmallWebRTCTransport`). |
-| `app/prompts.py` | `build_system_instructions(language)` - builds the system prompt for a single fixed language, embedding the hospital data. |
+| `app/prompts.py` | `build_system_instructions(language)` - the full per-language receptionist prompt, embedding the hospital data. `build_language_detection_instructions(languages)` - the minimal starting prompt used only until the caller picks a language, when more than one is configured. |
 | `app/data/hospital_data.py` | Dummy data: doctors, specialties, available days/times, accepted insurance providers, hospital hours/location. Plain Python constants, no database. |
 | `app/check_api_keys.py` | Preflight script - validates `OPENAI_API_KEY` before running `app/main.py`. |
 | `app/error_helpers.py` | `classify_error()` - best-effort diagnosis of runtime errors: OpenAI auth/quota vs. a local Whisper/Piper model problem. |
 | `scripts/benchmark_voice_stack.py` | The benchmark script (and its results, captured in `03_DECISIONS_LOG.md`) used to pick the exact STT/TTS models in `app/main.py` for this VPS's 2-core CPU. Not part of the running app - a one-time validation tool. |
-| `.env` / `.env.example` | `OPENAI_API_KEY` and `LANGUAGE`. Real values are in `.env` (gitignored, never committed). |
+| `.env` / `.env.example` | `OPENAI_API_KEY` and `LANGUAGES`. Real values are in `.env` (gitignored, never committed). |
 | `ecosystem.config.js` | PM2 process config for production - how `app/main.py` is kept running, restarted on crash, and logged. |
 | `deploy.sh` | One-command update script for the VPS: `git pull` + reinstall deps + `pm2 restart`. |
 | `README.md` | Setup, run, and deployment instructions. |

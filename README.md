@@ -6,7 +6,7 @@ Voice AI agent for a hospital front desk: handles Book Appointment, Insurance In
 
 **Stack:** [Pipecat](https://pipecat.ai) (orchestration) + self-hosted **Whisper** (STT) + **OpenAI gpt-4o-mini** (LLM) + self-hosted **Piper** (TTS). Only one paid API (`OPENAI_API_KEY`) is needed — STT and TTS run locally, no VideoSDK/Deepgram/ElevenLabs anymore (see [`docs/03_DECISIONS_LOG.md`](docs/03_DECISIONS_LOG.md) for why).
 
-> **Language is fixed per run** via the `LANGUAGE` env var (`en` or `ar`) — not yet switchable mid-call. Urdu isn't wired up yet. See [`docs/02_CURRENT_STATUS.md`](docs/02_CURRENT_STATUS.md).
+> **Caller picks English or Arabic at the start of the call** (`LANGUAGES=en,ar` in `.env` — set a single value like `LANGUAGES=en` to force one language instead). Urdu isn't wired up yet. See [`docs/02_CURRENT_STATUS.md`](docs/02_CURRENT_STATUS.md).
 
 > **Run this on the VPS**, not a local dev machine — the self-hosted STT/TTS models were benchmarked specifically on that 2-core CPU (see `scripts/benchmark_voice_stack.py`) and confirmed real-time-capable there.
 
@@ -33,7 +33,7 @@ requirements.txt / .env.example
 |---|---|
 | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com/api-keys) (paid account) |
 
-Copy `.env.example` to `.env`, paste your key in, and optionally set `LANGUAGE=en` or `LANGUAGE=ar`:
+Copy `.env.example` to `.env`, paste your key in, and optionally override `LANGUAGES` (defaults to `en,ar`; set it to a single value like `LANGUAGES=en` to force one language):
 
 ```bash
 cp .env.example .env
@@ -61,7 +61,7 @@ Hits OpenAI directly with a real tiny completion and tells you: valid / missing 
 python app/main.py
 ```
 
-This starts a local WebRTC dev server. Open `http://<your-vps-ip>:7860/client` in a browser, allow mic access, and talk to the agent. The first run downloads the Whisper and Piper models for whichever `LANGUAGE` is set — this can take a minute.
+This starts a local WebRTC dev server. Open `http://<your-vps-ip>:7860/client` in a browser, allow mic access, and talk to the agent. The first run downloads the Whisper and Piper models for every language in `LANGUAGES` — with the default `en,ar` that's four models total, so it can take a few minutes.
 
 If something fails *during* a call, `app/main.py` catches it and prints a best-effort diagnosis (OpenAI auth/quota vs. a local model problem) instead of a raw traceback. See `app/error_helpers.py`.
 
@@ -80,7 +80,7 @@ pip install -r requirements.txt
 deactivate
 
 cp .env.example .env
-nano .env   # paste OPENAI_API_KEY and set LANGUAGE
+nano .env   # paste OPENAI_API_KEY and set LANGUAGES if you want something other than the en,ar default
 
 mkdir -p logs
 pm2 start ecosystem.config.js
@@ -109,7 +109,7 @@ pm2 status                         # is it up, how many restarts, uptime
 
 ## Known limitations (tracked, not bugs)
 
-- **One language per run.** Set `LANGUAGE=en` or `LANGUAGE=ar` in `.env` and restart to switch — a caller can't pick their language mid-call yet. Real-time switching needs Pipecat's `ServiceSwitcher`, not yet implemented (verify-before-build, not guessed). See `docs/05_NEXT_STEPS.md`.
+- **Dynamic English/Arabic switching is built but not yet confirmed on a real call.** `LANGUAGES=en,ar` (default) lets the caller pick live via Pipecat's `ServiceSwitcher` + a `set_language` function call — see `docs/03_DECISIONS_LOG.md` for the design and a frame-ordering race condition it had to avoid. Needs a live phone test before it's trusted for a demo. Set `LANGUAGES=en` to force single-language mode as before.
 - **No Urdu yet.** No validated self-hosted Whisper/Piper pair for Urdu. Was tested and dropped for now — see `docs/02_CURRENT_STATUS.md`.
 - **No phone number / telephony yet.** Testing is via the browser WebRTC client only. Twilio integration is the next step, see `docs/05_NEXT_STEPS.md`.
 - **STT/TTS model picks are hardware-specific.** `STT_MODEL`/`PIPER_VOICE` in `app/main.py` were chosen based on real benchmarks on *this* VPS's 2-core CPU (see `scripts/benchmark_voice_stack.py` and its results in `docs/03_DECISIONS_LOG.md`) — re-benchmark before changing VPS specs or hardware.

@@ -1,10 +1,13 @@
 """Builds the system instructions handed to the LLM, embedding the dummy hospital data.
 
-Language is fixed per run (see main.py's LANGUAGE env var) - this build generates
-a single-language instruction set directly, skipping the old "ask caller to pick
-a language" step since STT/TTS for this run only understand one language anyway.
-Multi-language-in-one-call is a known next step, not yet implemented - see
-docs/05_NEXT_STEPS.md.
+Two prompts live here:
+- build_language_detection_instructions(): the LLM's STARTING persona when more
+  than one language is configured (see main.py's LANGUAGES env var) - its only
+  job is to find out which language the caller wants and call the set_language
+  tool. Skipped entirely in single-language mode.
+- build_system_instructions(): the real per-language hospital-receptionist
+  persona, used from the start in single-language mode, or swapped in by
+  set_language's handler once a language has been chosen in multi-language mode.
 """
 
 from data.hospital_data import (
@@ -29,6 +32,33 @@ def _format_doctors() -> str:
             f"- {doc['name']} ({doc['specialty']}): available {days}, {doc['available_times']}"
         )
     return "\n".join(lines)
+
+
+def build_language_detection_instructions(languages: list[str]) -> str:
+    """Builds the LLM's STARTING system prompt, before any language is chosen.
+
+    Deliberately minimal: say one short greeting covering every configured
+    language, then call set_language as soon as the caller states a
+    preference, and say nothing else. The real receptionist behavior still
+    lives entirely in build_system_instructions - this is only the router in
+    front of it. See main.py's set_language_handler for the handoff.
+    """
+    for lang in languages:
+        if lang not in LANGUAGE_NAMES:
+            raise ValueError(
+                f"Unsupported language '{lang}', expected one of {list(LANGUAGE_NAMES)}"
+            )
+
+    names_block = " / ".join(LANGUAGE_NAMES[lang] for lang in languages)
+
+    return f"""You are a hospital phone receptionist's language router. Your ONLY job is to find out which language the caller wants to continue in, then call set_language. Do not discuss hospital services, doctors, appointments, or anything else - that only begins after set_language returns.
+
+Say ONE short greeting line, phrased so a caller who speaks any single one of {names_block} can understand enough of it to answer - greet them briefly, then ask which language they want: {names_block}.
+
+Accept their answer in any of these languages, in any natural phrasing - the language's own name (in English or in that language), or an ordinal like "the first one" matching the order {names_block} was offered in. If you are not confident which of {names_block} they mean, ask them to just say the language name again - do not guess.
+
+The moment you are confident, call set_language with that choice and say nothing else before or after the call. Once set_language returns, follow the `instructions` field of its result EXACTLY for the rest of the call - from that point on, that field governs everything you say and do, not this prompt.
+"""
 
 
 def build_system_instructions(language: str = "en") -> str:
