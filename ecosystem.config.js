@@ -8,7 +8,19 @@ module.exports = {
       script: "app/main.py",
       // Pipecat's dev runner binds to localhost by default - needs this to be
       // reachable from outside the VPS at all (confirmed via `ss -tlnp`).
-      args: "--host 0.0.0.0",
+      // --ice-servers: TEMPORARY local coturn TURN server (TCP/443) so WebRTC
+      // media works despite the VPS firewall blocking direct UDP - see
+      // docs/03_DECISIONS_LOG.md. Remove once Hostinger firewall access allows
+      // opening WebRTC's UDP ports properly, or keep for production (TURN is
+      // needed anyway for callers behind restrictive networks).
+      args: [
+        "--host", "0.0.0.0",
+        "--ice-servers", JSON.stringify({
+          urls: "turn:187.127.231.215:443?transport=tcp",
+          username: "pipecatuser",
+          credential: "TempPass123",
+        }),
+      ],
       interpreter: "./venv/bin/python3",
       cwd: __dirname,
       env: {
