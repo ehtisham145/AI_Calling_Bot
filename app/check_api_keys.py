@@ -62,9 +62,9 @@ def main():
     print(f"{label:16} OpenAI   {detail}")
     print()
     if status != "OK":
-        print("Fix the key above before running main.py.")
+        print("Fix the key above before running app/main.py.")
     else:
-        print("Key is valid. Safe to run: python main.py")
+        print("Key is valid. Safe to run: python app/main.py")
         print("(STT/TTS are self-hosted - Whisper/Piper models download automatically on first run.)")
 
 

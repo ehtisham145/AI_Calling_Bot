@@ -9,7 +9,7 @@ switchable mid-call. This is a known, deliberate scope cut for this pass - see
 docs/05_NEXT_STEPS.md for the plan to add real-time switching via Pipecat's
 ServiceSwitcher once that's been verified properly (not guessed).
 
-Run with: python main.py
+Run with: python app/main.py
 Opens a local WebRTC dev server at http://localhost:7860/client - open that in
 a browser to talk to the agent. Meant to run on the VPS where the STT/TTS
 models were benchmarked (2-core CPU, confirmed real-time-capable).
