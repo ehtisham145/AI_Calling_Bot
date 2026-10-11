@@ -25,7 +25,8 @@ from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
-from pipecat.processors.aggregators.llm_context import LLMContext, LLMContextAggregatorPair
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.runner.types import SmallWebRTCRunnerArguments
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.piper.tts import PiperTTSService
@@ -39,9 +40,9 @@ from prompts import build_system_instructions
 LANGUAGE = os.getenv("LANGUAGE", "en")  # "en" or "ar" for this run - see module docstring
 
 # STT/TTS model picks validated on the actual 2-core VPS target (see
-# vps_benchmark/) - specialized per-language models beat generic multilingual
-# ones for Arabic, and generic "base" beat distil-small.en for English on this
-# specific hardware despite distil's marketing.
+# scripts/benchmark_voice_stack.py) - specialized per-language models beat
+# generic multilingual ones for Arabic, and generic "base" beat distil-small.en
+# for English on this specific hardware despite distil's marketing.
 STT_MODEL = {
     "en": "base",
     "ar": "Omar10lfc/whisper-small-arabic-ct2-int8",
@@ -67,17 +68,17 @@ async def run_bot(transport: BaseTransport):
     )
 
     context = LLMContext()
-    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
+    context_aggregator = LLMContextAggregatorPair(context)
 
     pipeline = Pipeline(
         [
             transport.input(),
             stt,
-            user_aggregator,
+            context_aggregator.user(),
             llm,
             tts,
             transport.output(),
-            assistant_aggregator,
+            context_aggregator.assistant(),
         ]
     )
 
