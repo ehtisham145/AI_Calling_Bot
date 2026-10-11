@@ -10,7 +10,8 @@ Migrated to a **Pipecat + fully self-hosted STT/TTS + OpenAI LLM** stack. The pr
 - [x] Every Pipecat API used in `app/main.py` (`Pipeline`, `PipelineTask`, `PipelineRunner`, `WhisperSTTService`, `OpenAILLMService`, `PiperTTSService`, `LLMContext`/`LLMContextAggregatorPair`, the `bot()`/`run_bot()` dev-runner pattern, `SmallWebRTCTransport`, `transport.event_handler("on_client_connected")` + `LLMRunFrame`) was checked against official Pipecat docs before writing the code - not guessed.
 - [x] `app/prompts.py` generates valid instructions for both `en` and `ar`.
 - [x] **Bot greets first.** Originally the bot silently waited for the caller to speak first (wrong for a receptionist) - fixed via an `on_client_connected` handler that queues an `LLMRunFrame()` to trigger the opening turn from the system prompt alone.
-- [x] **Dynamic English/Arabic language switching, built and code-reviewed (not yet live-call-tested - see below).** `LANGUAGES=en,ar` (replaces the old single-value `LANGUAGE`) pre-loads both languages' STT/TTS and lets the caller pick one at the start of the call via a `set_language` function call, instead of needing a restart. See `03_DECISIONS_LOG.md` for the `ServiceSwitcher` design and the frame-ordering race condition it had to avoid (verified against the actual installed `pipecat-ai` source, not just docs).
+- [x] **Dynamic English/Arabic language switching, confirmed working on a live call on the actual VPS.** `LANGUAGES=en,ar` (replaces the old single-value `LANGUAGE`) pre-loads both languages' STT/TTS and lets the caller pick one at the start of the call via a `set_language` function call - selecting Arabic live switched the conversation into Arabic correctly. See `03_DECISIONS_LOG.md` for the `ServiceSwitcher` design and the frame-ordering race condition it had to avoid (verified against the actual installed `pipecat-ai` source, not just docs).
+- [x] **Arabic's live-call response time investigated and explained - not a model problem.** Felt slow/"stuck" on live calls; re-benchmarking on the VPS showed this was the VPS being under load from something else at the time (every model, English included, measured slower than its documented baseline until `ai-calling-bot` was stopped for a clean run) - the Arabic model itself measured RTF 0.52 in isolation, same as originally benchmarked. Two candidate replacement models were tried and both were worse (one failed to load, one was far slower) - see `03_DECISIONS_LOG.md`. No model change made.
 
 ## Not Yet Validated / Known Gaps
 
@@ -23,8 +24,8 @@ The milestone above was English, open-ended conversation only. Still need to: sw
 ### 3. Only English and Arabic - no Urdu
 Urdu was tested with generic Whisper (`tiny`/`base`) in `scripts/benchmark_voice_stack.py` and the accuracy was poor even after trying a larger model - no community Arabic-style fine-tune was found for Urdu, and no Piper Urdu voice was adopted for production (the one tested, `ur_PK-fasih-medium`, is personal/non-commercial licensed - not usable for a paid client product anyway). Urdu is deferred, not abandoned - see `05_NEXT_STEPS.md`.
 
-### 4. Language switching is built but not yet confirmed on a real call
-`LANGUAGES=en,ar` lets the caller choose live instead of restarting with a different env var (see above) - the code is written and reasoned through carefully (including a real frame-ordering race condition, found and fixed before ever running it), but it hasn't been exercised with real speech yet. Needs the same kind of live phone-over-LAN pass that confirmed the original English pipeline and the VAD fix - see `05_NEXT_STEPS.md`.
+### 4. Language switching confirmed working, but the full menu flow in Arabic post-switch isn't walked through yet
+The switch itself (STT/TTS/persona all flipping to Arabic on request) is confirmed live - see above. Still need the same full 4-menu-branch walkthrough in Arabic (post-switch) as item 2 above calls for.
 
 ### 5. No phone number / telephony yet
 Testing is via Pipecat's local WebRTC dev client (`http://<vps-ip>:7860/client`) only. No Twilio number wired up. See `05_NEXT_STEPS.md`.
