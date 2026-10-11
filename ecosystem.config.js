@@ -8,19 +8,13 @@ module.exports = {
       script: "app/main.py",
       // Pipecat's dev runner binds to localhost by default - needs this to be
       // reachable from outside the VPS at all (confirmed via `ss -tlnp`).
-      // --ice-servers: TEMPORARY local coturn TURN server (TCP/443) so WebRTC
-      // media works despite the VPS firewall blocking direct UDP - see
-      // docs/03_DECISIONS_LOG.md. Remove once Hostinger firewall access allows
-      // opening WebRTC's UDP ports properly, or keep for production (TURN is
-      // needed anyway for callers behind restrictive networks).
-      args: [
-        "--host", "0.0.0.0",
-        "--ice-servers", JSON.stringify({
-          urls: "turn:187.127.231.215:443?transport=tcp",
-          username: "pipecatuser",
-          credential: "TempPass123",
-        }),
-      ],
+      // A local coturn TURN server on 443 was tried to route around the VPS
+      // firewall blocking direct UDP, but its auth kept failing (401) even
+      // after the recommended turnadmin fix, and it required stopping
+      // AML-Portal's nginx (which also needs 443) - abandoned. Real fix is
+      // opening WebRTC's ports in Hostinger's firewall panel directly - see
+      // docs/03_DECISIONS_LOG.md.
+      args: ["--host", "0.0.0.0"],
       interpreter: "./venv/bin/python3",
       cwd: __dirname,
       env: {

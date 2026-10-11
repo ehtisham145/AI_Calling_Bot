@@ -3,9 +3,10 @@
 Roughly in priority order. Update this file as items complete or priorities shift - it's meant to stay current, not be a historical record (that's what `03_DECISIONS_LOG.md` is for).
 
 ## Immediate (finishing the Pipecat migration)
-1. **Run `app/main.py` live on the VPS for the first time** and confirm the full Pipecat pipeline actually connects and holds a conversation (STT/TTS model choice and Pipecat's APIs were verified individually, but the assembled pipeline hasn't been run live yet - see `02_CURRENT_STATUS.md`).
-2. Manually test all 4 menu branches (Book Appointment, Insurance Information, Doctor Availability, Find a Doctor) in both `LANGUAGE=en` and `LANGUAGE=ar`, confirm responses match `app/data/hospital_data.py` correctly.
-3. Tune/fix anything that sounds wrong in `app/prompts.py` or the dummy data based on that testing.
+1. **Get real Hostinger firewall access and open WebRTC's ports** (TCP+UDP 7860, plus whatever port range SmallWebRTCTransport needs for direct media). This is now the single blocker to testing the bot end-to-end. A local coturn TURN server on 443 was tried as a workaround and abandoned - see `03_DECISIONS_LOG.md` for why.
+2. Once reachable, confirm the full Pipecat pipeline actually connects and holds a voice conversation (STT/TTS model choice and Pipecat's APIs were verified individually, but a live end-to-end voice exchange hasn't been confirmed yet - see `02_CURRENT_STATUS.md`).
+3. Manually test all 4 menu branches (Book Appointment, Insurance Information, Doctor Availability, Find a Doctor) in both `LANGUAGE=en` and `LANGUAGE=ar`, confirm responses match `app/data/hospital_data.py` correctly.
+4. Tune/fix anything that sounds wrong in `app/prompts.py` or the dummy data based on that testing.
 
 ## Before showing the client
 4. **Implement real-time language switching** (caller picks language mid-call instead of restarting with a different `LANGUAGE` env var) - research Pipecat's `ServiceSwitcher` and `STTUpdateSettingsFrame`/`TTSUpdateSettingsFrame` properly (verify against docs/source, don't guess) and wire it in.
