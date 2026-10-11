@@ -27,7 +27,10 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.runner.types import SmallWebRTCRunnerArguments
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.piper.tts import PiperTTSService
@@ -69,7 +72,15 @@ async def run_bot(transport: BaseTransport):
     )
 
     context = LLMContext()
-    context_aggregator = LLMContextAggregatorPair(context)
+    # VAD lives here (on the user aggregator), not on the transport - in Pipecat
+    # 1.0+ this is what actually feeds speech start/stop into turn detection and
+    # triggers STT. Putting it only on TransportParams (the old pre-1.0 way)
+    # loads the VAD model but never wires it into anything - confirmed by hours
+    # of silent failure: connection fine, TTS/text fine, but zero STT/VAD events
+    # ever fired for real microphone input. See docs/03_DECISIONS_LOG.md.
+    context_aggregator = LLMContextAggregatorPair(
+        context, user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer())
+    )
 
     pipeline = Pipeline(
         [
@@ -108,7 +119,6 @@ async def bot(runner_args: SmallWebRTCRunnerArguments):
         params=TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
         ),
         webrtc_connection=runner_args.webrtc_connection,
     )
