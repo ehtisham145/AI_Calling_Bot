@@ -43,8 +43,10 @@ Pipecat has a `ServiceSwitcher` utility and `STTUpdateSettingsFrame`/`TTSUpdateS
 | `check_api_keys.py` | Preflight script - validates `OPENAI_API_KEY` before running `main.py`. |
 | `error_helpers.py` | `classify_error()` - best-effort diagnosis of runtime errors: OpenAI auth/quota vs. a local Whisper/Piper model problem. |
 | `vps_benchmark/` | The benchmark script (and its results, captured in `03_DECISIONS_LOG.md`) used to pick the exact STT/TTS models in `main.py` for this VPS's 2-core CPU. Not part of the running app - a one-time validation tool. |
-| `.env` / `.env.example` | `OPENAI_API_KEY` and `LANGUAGE`. Real values are in `.env` (gitignored). |
-| `README.md` | Setup and run instructions. |
+| `.env` / `.env.example` | `OPENAI_API_KEY` and `LANGUAGE`. Real values are in `.env` (gitignored, never committed). |
+| `ecosystem.config.js` | PM2 process config for production - how `main.py` is kept running, restarted on crash, and logged. |
+| `deploy.sh` | One-command update script for the VPS: `git pull` + reinstall deps + `pm2 restart`. |
+| `README.md` | Setup, run, and deployment instructions. |
 
 ## State Management
 There is **no custom state machine** for the conversation flow (menu navigation, etc.) - it's tracked implicitly by the LLM through `LLMContext`/conversation history, guided entirely by the instructions in `prompts.py`. This was a deliberate simplicity choice for the demo stage - see `03_DECISIONS_LOG.md`.

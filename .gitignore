@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+logs/
+piper_models/
+vps_benchmark/piper_models/

@@ -48,6 +48,48 @@ This starts a local WebRTC dev server. Open `http://<your-vps-ip>:7860/client` i
 
 If something fails *during* a call, `main.py` catches it and prints a best-effort diagnosis (OpenAI auth/quota vs. a local model problem) instead of a raw traceback. See `error_helpers.py`.
 
+## Production Deployment (VPS, via Git + PM2)
+
+Steps 1-4 above are fine for a quick manual test. For anything longer-running, deploy it properly so it survives disconnects/crashes/reboots and logs to a real file instead of your terminal.
+
+### One-time setup
+
+```bash
+git clone https://github.com/ehtisham145/AI_Calling_Bot.git
+cd AI_Calling_Bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+
+cp .env.example .env
+nano .env   # paste OPENAI_API_KEY and set LANGUAGE
+
+mkdir -p logs
+pm2 start ecosystem.config.js
+pm2 save                      # survives a VPS reboot
+pm2 install pm2-logrotate     # keeps logs from growing forever
+```
+
+### Every update after that
+
+Push from your dev machine as usual (`git add` / `commit` / `push`), then on the VPS:
+
+```bash
+./deploy.sh
+```
+
+Pulls the latest code, reinstalls any changed dependencies, restarts the bot via PM2, and shows the last 20 log lines so you can confirm it came back up cleanly.
+
+### Logs
+
+```bash
+pm2 logs ai-calling-bot            # live tail
+pm2 logs ai-calling-bot --lines 100 --nostream   # last 100 lines, no follow
+tail -f logs/error.log             # errors only, straight from file
+pm2 status                         # is it up, how many restarts, uptime
+```
+
 ## Known limitations (tracked, not bugs)
 
 - **One language per run.** Set `LANGUAGE=en` or `LANGUAGE=ar` in `.env` and restart to switch — a caller can't pick their language mid-call yet. Real-time switching needs Pipecat's `ServiceSwitcher`, not yet implemented (verify-before-build, not guessed). See `docs/05_NEXT_STEPS.md`.
