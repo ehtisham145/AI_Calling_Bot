@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
@@ -84,6 +85,15 @@ async def run_bot(transport: BaseTransport):
 
     task = PipelineTask(pipeline)
     runner = PipelineRunner()
+
+    # The LLM only speaks when it has something to respond to - without this,
+    # the bot would silently wait for the caller to speak first, which is
+    # backwards for a receptionist (it should greet first). Triggering an
+    # LLMRunFrame with no new user message makes it generate an opening turn
+    # straight from the system prompt's "greet + present the menu" instruction.
+    @transport.event_handler("on_client_connected")
+    async def on_client_connected(transport, client):
+        await task.queue_frames([LLMRunFrame()])
 
     try:
         await runner.run(task)
