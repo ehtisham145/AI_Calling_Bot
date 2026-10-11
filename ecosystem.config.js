@@ -5,7 +5,7 @@ module.exports = {
   apps: [
     {
       name: "ai-calling-bot",
-      script: "main.py",
+      script: "app/main.py",
       interpreter: "./venv/bin/python3",
       cwd: __dirname,
       env: {

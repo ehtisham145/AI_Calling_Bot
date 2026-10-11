@@ -10,7 +10,7 @@ Why things are the way they are - so nobody re-litigates a settled decision with
 **Trade-off accepted**: had to drop VideoSDK's built-in playground (replaced by Pipecat's local WebRTC dev client) and re-verify the entire API surface from scratch (Pipeline/PipelineTask/PipelineRunner, service classes, the `bot()`/`run_bot()` dev-runner pattern) since none of it carries over from VideoSDK.
 **Scope cut alongside this migration**: mid-call language switching (caller picks language, agent switches live) was dropped for this pass in favor of a fixed-per-run `LANGUAGE` env var. Pipecat has the right tool for real switching (`ServiceSwitcher`, `STTUpdateSettingsFrame`/`TTSUpdateSettingsFrame`) but its exact usage wasn't verified deeply enough to build against with confidence in this pass - see `05_NEXT_STEPS.md`. Urdu was also dropped from this pass (see the VPS benchmark results below) - only English and Arabic are wired up.
 
-### VPS benchmark results (2-core CPU, `vps_benchmark/benchmark_voice_stack.py`)
+### VPS benchmark results (2-core CPU, `scripts/benchmark_voice_stack.py`)
 Round-trip test (Piper synthesizes text -> Whisper transcribes it back), RTF = time_taken / audio_duration, RTF < 1.0 = faster than real-time:
 
 | Language | Model | STT RTF | Transcription accuracy |
@@ -22,7 +22,7 @@ Round-trip test (Piper synthesizes text -> Whisper transcribes it back), RTF = t
 | Arabic | `Omar10lfc/whisper-small-arabic-ct2-int8` (Arabic-specialized fine-tune) | 0.62 | **Near-perfect** - clear win over generic models |
 | Urdu | Whisper `tiny`/`base` (generic multilingual) | 0.17-0.44 | **Poor even on `base`** - core words like "ہسپتال" (hospital) consistently garbled. No Urdu-specialized fine-tune found. Dropped from this pass. |
 
-**Chosen for `main.py`**: English -> Whisper `base` (not `distil-small.en` - slower in practice here), Arabic -> `Omar10lfc/whisper-small-arabic-ct2-int8`. TTS: Piper `en_US-amy-medium` / `ar_JO-kareem-medium` (both TTS RTF 0.05-0.09, never the bottleneck).
+**Chosen for `app/main.py`**: English -> Whisper `base` (not `distil-small.en` - slower in practice here), Arabic -> `Omar10lfc/whisper-small-arabic-ct2-int8`. TTS: Piper `en_US-amy-medium` / `ar_JO-kareem-medium` (both TTS RTF 0.05-0.09, never the bottleneck).
 **Licensing note**: a Piper Urdu voice (`ur_PK-fasih-medium`) was tested and found personal/non-commercial licensed - not usable in a paid client product regardless of accuracy. Any future Urdu voice needs its license checked, not just its quality.
 
 ## VideoSDK over Vapi.ai or a fully custom Twilio+raw-APIs build

@@ -35,18 +35,34 @@ Pipecat has a `ServiceSwitcher` utility and `STTUpdateSettingsFrame`/`TTSUpdateS
 
 ## Project Files
 
+```
+app/                        -- the running application
+  main.py                   -- entry point: run_bot() + bot()
+  prompts.py                -- build_system_instructions(language)
+  error_helpers.py          -- classify_error()
+  check_api_keys.py         -- preflight OPENAI_API_KEY check
+  data/hospital_data.py     -- dummy hospital data
+scripts/
+  benchmark_voice_stack.py  -- one-time STT/TTS hardware benchmark (not part of the running app)
+docs/                       -- project context (this folder)
+ecosystem.config.js         -- PM2 process config
+deploy.sh                   -- one-command VPS update script
+.env / .env.example         -- OPENAI_API_KEY and LANGUAGE
+README.md                   -- setup, run, deployment instructions
+```
+
 | File | Purpose |
 |---|---|
-| `main.py` | Entry point. Defines `run_bot()` (builds the STT/LLM/TTS `Pipeline`, runs it via `PipelineTask`/`PipelineRunner`) and `bot()` (the Pipecat dev-runner entry point that wires up the `SmallWebRTCTransport`). |
-| `prompts.py` | `build_system_instructions(language)` - builds the system prompt for a single fixed language, embedding the hospital data. |
-| `data/hospital_data.py` | Dummy data: doctors, specialties, available days/times, accepted insurance providers, hospital hours/location. Plain Python constants, no database. |
-| `check_api_keys.py` | Preflight script - validates `OPENAI_API_KEY` before running `main.py`. |
-| `error_helpers.py` | `classify_error()` - best-effort diagnosis of runtime errors: OpenAI auth/quota vs. a local Whisper/Piper model problem. |
-| `vps_benchmark/` | The benchmark script (and its results, captured in `03_DECISIONS_LOG.md`) used to pick the exact STT/TTS models in `main.py` for this VPS's 2-core CPU. Not part of the running app - a one-time validation tool. |
+| `app/main.py` | Entry point. Defines `run_bot()` (builds the STT/LLM/TTS `Pipeline`, runs it via `PipelineTask`/`PipelineRunner`) and `bot()` (the Pipecat dev-runner entry point that wires up the `SmallWebRTCTransport`). |
+| `app/prompts.py` | `build_system_instructions(language)` - builds the system prompt for a single fixed language, embedding the hospital data. |
+| `app/data/hospital_data.py` | Dummy data: doctors, specialties, available days/times, accepted insurance providers, hospital hours/location. Plain Python constants, no database. |
+| `app/check_api_keys.py` | Preflight script - validates `OPENAI_API_KEY` before running `app/main.py`. |
+| `app/error_helpers.py` | `classify_error()` - best-effort diagnosis of runtime errors: OpenAI auth/quota vs. a local Whisper/Piper model problem. |
+| `scripts/benchmark_voice_stack.py` | The benchmark script (and its results, captured in `03_DECISIONS_LOG.md`) used to pick the exact STT/TTS models in `app/main.py` for this VPS's 2-core CPU. Not part of the running app - a one-time validation tool. |
 | `.env` / `.env.example` | `OPENAI_API_KEY` and `LANGUAGE`. Real values are in `.env` (gitignored, never committed). |
-| `ecosystem.config.js` | PM2 process config for production - how `main.py` is kept running, restarted on crash, and logged. |
+| `ecosystem.config.js` | PM2 process config for production - how `app/main.py` is kept running, restarted on crash, and logged. |
 | `deploy.sh` | One-command update script for the VPS: `git pull` + reinstall deps + `pm2 restart`. |
 | `README.md` | Setup, run, and deployment instructions. |
 
 ## State Management
-There is **no custom state machine** for the conversation flow (menu navigation, etc.) - it's tracked implicitly by the LLM through `LLMContext`/conversation history, guided entirely by the instructions in `prompts.py`. This was a deliberate simplicity choice for the demo stage - see `03_DECISIONS_LOG.md`.
+There is **no custom state machine** for the conversation flow (menu navigation, etc.) - it's tracked implicitly by the LLM through `LLMContext`/conversation history, guided entirely by the instructions in `app/prompts.py`. This was a deliberate simplicity choice for the demo stage - see `03_DECISIONS_LOG.md`.
