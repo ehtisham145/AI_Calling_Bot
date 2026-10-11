@@ -6,6 +6,9 @@ module.exports = {
     {
       name: "ai-calling-bot",
       script: "app/main.py",
+      // Pipecat's dev runner binds to localhost by default - needs this to be
+      // reachable from outside the VPS at all (confirmed via `ss -tlnp`).
+      args: "--host 0.0.0.0",
       interpreter: "./venv/bin/python3",
       cwd: __dirname,
       env: {
