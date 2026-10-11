@@ -1,0 +1,7 @@
+pipecat-ai[openai,webrtc,silero]
+pipecat-ai-small-webrtc-prebuilt
+piper-tts
+faster-whisper
+av<19
+python-dotenv
+requests
