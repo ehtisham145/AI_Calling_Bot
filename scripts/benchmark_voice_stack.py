@@ -8,8 +8,23 @@ Tests specialized lightweight models instead of just generic Whisper sizes:
 - English: "distil-small.en" (distil-whisper) - 6x faster, ~49% smaller than
   large, within ~1% WER of full Whisper, English-only by design.
 - Arabic: "Omar10lfc/whisper-small-arabic-ct2-int8" - community fine-tune of
-  Whisper-small specifically on Arabic, should beat generic multilingual
-  "small"/"base" for Arabic specifically.
+  Whisper-small specifically on Arabic, currently in production use. Clearly
+  more accurate than generic "tiny"/"base" (see docs/03_DECISIONS_LOG.md) but
+  noticeably slower (RTF 0.62 vs 0.13-0.22) - noticeable enough in practice
+  (next to the much faster English model) that it's worth checking whether a
+  smaller Arabic-specialized model can close that gap without giving back the
+  accuracy generic tiny/base lost. Two more candidates added for that:
+  - "salamosy/whisper-tiny-arabic": tiny-sized (same size class as the fast
+    generic baseline), but Arabic fine-tuned - the real target, if it loads
+    and the accuracy holds up. Not pre-converted to CTranslate2 format, so it
+    may fail to load depending on the installed faster-whisper version - the
+    try/except below reports that cleanly instead of crashing if so.
+  - "parseh/whisper-ar-dialectal-ct2": pre-packaged for faster-whisper,
+    unknown size/accuracy - included to get a real number instead of
+    guessing one.
+  None of these three outperforming the current pick on BOTH speed and
+  accuracy is a real possible outcome - that's fine, it means the current
+  speed/accuracy trade-off was already the right one and nothing changes.
 Both compared against generic "tiny" and "base" as a baseline.
 
 Reports RTF (real-time factor) = time_taken / audio_duration.
@@ -36,7 +51,13 @@ MODELS_DIR.mkdir(exist_ok=True)
 # multilingual baselines; the others are language-specialized.
 WHISPER_CANDIDATES = {
     "en": ["tiny", "base", "distil-small.en"],
-    "ar": ["tiny", "base", "Omar10lfc/whisper-small-arabic-ct2-int8"],
+    "ar": [
+        "tiny",
+        "base",
+        "Omar10lfc/whisper-small-arabic-ct2-int8",  # current production pick
+        "salamosy/whisper-tiny-arabic",  # candidate: tiny-sized + Arabic-specialized
+        "parseh/whisper-ar-dialectal-ct2",  # candidate: pre-packaged for faster-whisper, unverified size/accuracy
+    ],
 }
 
 VOICES = {
